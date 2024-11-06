@@ -1,21 +1,21 @@
-import math
-import heapq
 import pygame
 import random
 
+from astar import MazeSolver
+
 pygame.init()
 
-# Screen and grid settings
+# Ustawienia sceny i siatki
 WIDTH, HEIGHT = 600, 600
-ROWS, COLS = 50, 50  # 50x50 grid
+ROWS, COLS = 30, 30  # 30x30 grid
 CELL_SIZE = WIDTH // COLS
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Labirynt")
+pygame.display.set_caption("Labirynt A*")
 
-# Colors
+# Kolory
 WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
+BLACK = (0, 0, 0) # sciany
 PINK = (255, 105, 180) # snake
 BLUE = (0, 0, 255)  # start
 GREEN = (0, 255, 0)  # meta
@@ -39,10 +39,6 @@ def dfs(x, y):
     przesuwac tylko w mozliwych kierunkach definiowanych przez DIRECTIONS, wiec nie moze przeskoczyc sciany.
     Przesuwa sie o 2 komorki, poniewaz w przeciwnym razie nie byloby sciany miedzy sciezkami. Dla kazdego kierunku
     (dx, dy) obliczane sa wspolrzedne nx, ny i sprawdzane czy sa w granicach labiryntu i czy nie sa juz sciezka.
-
-    :param x:
-    :param y:
-    :return:
     """
     maze[y][x] = 1  # Oznacza aktualna komorke jako sciezke
     random.shuffle(DIRECTIONS)  # Losowo przemieszaj kierunki
@@ -54,80 +50,74 @@ def dfs(x, y):
             maze[y + dy][x + dx] = 1  # Zamien sciane na sciezke
             dfs(nx, ny) # Rekurencyjnie wywolaj funkcje dla nowej komorki
 
-dfs(0, 0) # Rozpoczyna rekurencyjny algorytm generowania labiryntu od punktu (0, 0)
+def generate_maze():
+    """ Generates a maze using DFS """
+    # Zaczyna dfs od punktu (0, 0)
+    dfs(0, 0)
 
-dots = [] # Punkty w labiryncie
-max_dots = (ROWS * COLS) // 20  # Maksymalna liczba punktow w labiryncie - 5% komorek
-last_dot_time = pygame.time.get_ticks()  # Ostatni czas dodania punktu
-dot_interval = 500
-dot_progression = 0 # Postep w dodawaniu punktow
+    # By upewnic sie, ze zawsze na koncu jest sciezka do mety, ustawiamy ostatnie dwie komorki jako sciezke
+    maze[ROWS - 1][COLS - 1] = 1
+    maze[ROWS - 2][COLS - 1] = 1
 
-# Punkt startu i mety (lewy gorny rog i prawy dolny rog) - w celu wizualizacji kolorem niebieskim i zielonym
+# Generowanie labiryntu
+generate_maze()
+
+# Punkt startu i mety (lewy gorny rog i prawy dolny rog)
 start = (0, 0)
 end = (COLS - 1, ROWS - 1)
 
-def generate_dot(progress, min_distance=5, max_attempts=100):
-    """
-    Generuje punkt w labiryncie w zaleznosci od postepu
-    """
-    # Sprawdza, czy punkt nie jest zbyt blisko startu lub mety
-    x_start, x_end = 0, min(COLS - 1, start[0] + progress)
-    y_start, y_end = 0, min(ROWS - 1, start[1] + progress)
+# korzystamy z klasy MazeSolver z pliku astar.py
+solver = MazeSolver(maze)
+rotated_path  = solver.a_star(start, end)
+# Obracamy sciezke, poniewaz w naszym przypadku (x, y) to (row, col), a nie (x, y)
+path = [(y, x) for x, y in rotated_path]
 
-    attempts = 0
-    while attempts < max_attempts:
-        x_local, y_local = random.randint(x_start, x_end), random.randint(y_start, y_end)
-        if maze[y_local][x_local] == 1 and (x_local, y_local) not in dots:
-            # Ensure the point is far enough from existing points
-            too_close = False
-            for (x, y, _) in dots:
-                distance = math.sqrt((x_local - x) ** 2 + (y_local - y) ** 2)
-                if distance < min_distance:
-                    too_close = True
-                    break
-            if not too_close:
-                random_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-                dots.append((x_local, y_local, random_color))
-                return  # Successfully generated a dot, exit the function
-        attempts += 1
+# def print_maze(maze):
+#     for row in maze:
+#         print(row)
+#
+# print_maze(maze)
+
+# Indeks sciezki i odwiedzonych komorek (do rysowania)
+path_index = 0
+visited_cells = []
 
 # Petla gry
 running = True
 while running:
-    screen.fill(WHITE) # Wypelnia ekran bialym kolorem
+    screen.fill(WHITE)  # Fill the screen with white
 
-    # Rysuje labirynt
+    # Rysowanie labiryntu
     for row in range(ROWS):
         for col in range(COLS):
-            # Rysuje sciane lub sciezke w zaleznosci od wartosci w tablicy labiryntu
+            # Rysuje sciane jako czarna, a sciezke jako biala
             color = WHITE if maze[row][col] == 1 else BLACK
-            # Rysuje prostokat w miejscu komorki
             pygame.draw.rect(screen, color, (col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE))
 
-        # Rysuje punkty
-        for x, y, color in dots:
-            pygame.draw.circle(screen, color, (x * CELL_SIZE + CELL_SIZE // 2,
-                                               y * CELL_SIZE + CELL_SIZE // 2), 5)
+    # Rysuje poczatkowy punkt jako zielony i koncowy punkt jako niebieski
+    pygame.draw.rect(screen, GREEN, (start[0] * CELL_SIZE, start[1] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+    pygame.draw.rect(screen, BLUE, (end[0] * CELL_SIZE, end[1] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
 
-    # Ryuje punkt startu i mety
-    pygame.draw.rect(screen, BLUE, (start[0] * CELL_SIZE, start[1] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
-    pygame.draw.rect(screen, GREEN, (end[0] * CELL_SIZE, end[1] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+    # Rysuje sciezke w kolorze rozowym
+    if path_index < len(path):
+        # Jesli nie doszlismy do konca sciezki, rysujemy kolejny krok
+        current_x, current_y = path[path_index]
+        # aktualne x i y to wspolrzedne sciezki
+        visited_cells.append((current_x, current_y))  # Przechowujemy odwiedzone komorki do rysowania ogona
+        path_index += 1  # Przesuwamy sie do nastepnego punktu odnalezionej przez algorytm sciezki
+        pygame.time.delay(50)  # Delay zeby mozna bylo zobaczyc jak sciezka sie rysuje
 
-    current_time = pygame.time.get_ticks() # Aktualny czas
-    if current_time - last_dot_time > dot_interval and len(dots) < max_dots:
-        # Jesli nie osiagnieto maksymalnej liczby punktow w labiryncie i uplynal odpowiedni czas
-        # od dodania ostatniego punktu, dodaj nowy punkt
-        generate_dot(dot_progression)
-        # Zaktualizuj czas ostatniego dodania punktu
-        last_dot_time = current_time
-        # Zaktualizuj postep dodawania punktow
-        dot_progression += 1
+    # Rysuje odwiedzone komorki jako rozowe
+    for vx, vy in visited_cells:
+        pygame.draw.rect(screen, PINK, (vx * CELL_SIZE, vy * CELL_SIZE, CELL_SIZE, CELL_SIZE))
 
-    # Sprawdza zdarzenia (zamkniecie okna)
+    # Obsluga zdarzen (zamkniecie okna)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
+    # flip sluzy do odswiezania ekranu
     pygame.display.flip()
 
+# Koniec programu
 pygame.quit()
