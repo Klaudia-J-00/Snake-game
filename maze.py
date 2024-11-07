@@ -1,4 +1,3 @@
-import time
 import pygame
 import random
 
@@ -8,8 +7,7 @@ from settings import *
 pygame.init()
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Gra w snake'a")
-font = pygame.font.Font(None, 36)  # Rozmiar czcionki 36
+pygame.display.set_caption("Labirynt A*")
 
 maze = [[0 for _ in range(COLS)] for _ in range(ROWS)]
 # 0 oznacza sciane, 1 oznacza sciezke, na poczatek wypelniane jest samymi zerami (scianami)
@@ -69,20 +67,9 @@ path = [(y, x) for x, y in rotated_path]
 #
 # print_maze(maze)
 
-# Wybieramy co 6 punkt z sciezki, aby umiejscowic na nim "jablka"
-potential_points = path[4::6] # zaczynamy od piatego, zebysmy nie umieszczali "jablka" na starcie bo snake nie zdazy go zebrac
-points = []
-
 # Indeks sciezki i odwiedzonych komorek (do rysowania)
 path_index = 0
 visited_cells = []
-# Długosc snake'a (poczatkowo 1, bedzie sie zwiekszac po zebraniu "jablka")
-snake_length = 1
-# Ostatni punkt czasowy
-last_point_time = time.time()
-point_interval = 0.2  # Co ile sekund pojawia sie nowe "jablko"
-# Początkowy licznik punktów
-score = 0
 
 # Petla gry
 running = True
@@ -100,57 +87,18 @@ while running:
     pygame.draw.rect(screen, GREEN, (start[0] * CELL_SIZE, start[1] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
     pygame.draw.rect(screen, BLUE, (end[0] * CELL_SIZE, end[1] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
 
-    if potential_points and time.time() - last_point_time > point_interval:
-        points.append(potential_points.pop(0))  # Dodaj nowy punkt do "jablka"
-        last_point_time = time.time()  # Zresetuj licznik czasu
-
-    # Rysuje "jablka" jako zolte kropki
-    for px, py in points:
-        pygame.draw.circle(screen, YELLOW, (px * CELL_SIZE + CELL_SIZE // 2, py * CELL_SIZE + CELL_SIZE // 2),
-                           CELL_SIZE // 3)
-
+    # Rysuje sciezke w kolorze rozowym
     if path_index < len(path):
         # Jesli nie doszlismy do konca sciezki, rysujemy kolejny krok
         current_x, current_y = path[path_index]
-        visited_cells.append((current_x, current_y))
+        # aktualne x i y to wspolrzedne sciezki
+        visited_cells.append((current_x, current_y))  # Przechowujemy odwiedzone komorki do rysowania ogona
+        path_index += 1  # Przesuwamy sie do nastepnego punktu odnalezionej przez algorytm sciezki
+        pygame.time.delay(50)  # Delay zeby mozna bylo zobaczyc jak sciezka sie rysuje
 
-        if (current_x, current_y) in points:
-            # Jezeli snake dotarl do "jablka", to je zbiera i zwieksza dlugosc
-            points.remove((current_x, current_y))
-            snake_length += 1  # Zwieksz dlugosc snake'a
-            score += 1  # Zwieksz licznik punktow
-
-        if len(visited_cells) > snake_length:
-            # Jezeli snake jest dluzszy niz dlugosc, to usuwa ostatni element
-            visited_cells.pop(0)
-
-        path_index += 1
-        pygame.time.delay(170)  # Delay zeby mozna bylo zobaczyc jak snake sie porusza
-    else: # Jezeli doszlismy do konca sciezki, to konczymy gre
-        screen.fill(WHITE)  # Wyczyszczenie ekranu
-
-        # Wymiary prostokąta i pozycjonowanie na środku
-        rect_width, rect_height = 300, 150
-        rect_x = (WIDTH - rect_width) // 2
-        rect_y = (HEIGHT - rect_height) // 2
-
-        # Rysowanie białego prostokąta
-        pygame.draw.rect(screen, WHITE, (rect_x, rect_y, rect_width, rect_height))
-
-        # Tworzenie tekstu z końcowym wynikiem
-        end_text = font.render(f"Twój wynik: {score}", True, (0, 0, 0))  # Czarny tekst
-        text_rect = end_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))  # Ustawienie tekstu na środku prostokąta
-
-        # Rysowanie tekstu na ekranie
-        screen.blit(end_text, text_rect)
-
-    # Rysuje odwiedzone komorki w naprzemiennych kolorach (po to by lepiej zwizualizowac zebrane przez snake'a punkty)
-    for i, (vx, vy) in enumerate(visited_cells):
-        color = PINK if i % 2 == 0 else PURPLE  # Na przemian różowy i czarny
-        pygame.draw.rect(screen, color, (vx * CELL_SIZE, vy * CELL_SIZE, CELL_SIZE, CELL_SIZE))
-
-    score_text = font.render(f"Wynik: {score}", True, (136, 78, 203))  # Tekst z wynikiem
-    screen.blit(score_text, (470, 10))  # Wyswietl na ekranie w prawym górnym rogu
+    # Rysuje odwiedzone komorki jako rozowe
+    for vx, vy in visited_cells:
+        pygame.draw.rect(screen, PINK, (vx * CELL_SIZE, vy * CELL_SIZE, CELL_SIZE, CELL_SIZE))
 
     # Obsluga zdarzen (zamkniecie okna)
     for event in pygame.event.get():
