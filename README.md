@@ -77,9 +77,11 @@ You can adjust them to change game settings:
 
 ## Screenshots
 Snake game: 
+
 ![snake](/img/snake.png)
 
 
 Final score screen:
+
 ![score](/img/score.png)
 
