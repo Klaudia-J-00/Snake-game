@@ -26,7 +26,7 @@ python snake.py
 
 ## Features
 1. **Maze generation** - The maze is generated using the DFS algorithm.
-2. **A* algorithm ** - The A* algorithm is used to find the shortest path from the starting point to the endpoint.
+2. **A-STAR algorithm** - The A* algorithm is used to find the shortest path from the starting point to the endpoint.
 3. **Snake Movement** - The snake moves along the path found by the A* algorithm.
 4. **Point collection** - The snake collects points (apples) along the path, which increase its length and score when collected. 
 5. **Game Over** - The game ends when the snake reaches the endpoint of the maze and screen displays the final score.
